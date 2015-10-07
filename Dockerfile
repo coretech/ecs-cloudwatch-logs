@@ -1,5 +1,5 @@
 FROM ubuntu:trusty
-MAINTAINER Chad Schmutzer <schmutze@amazon.com>
+MAINTAINER Nathaniel Ritholtz <nritholtz@gmail.com>
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -21,11 +21,12 @@ RUN echo "if \$syslogfacility-text == 'local6' and \$programname == 'httpd' then
 	echo "if \$syslogfacility-text == 'local7' and \$programname == 'httpd' then /var/log/httpd-error.log" >> /etc/rsyslog.d/httpd.conf && \
 	echo "if \$syslogfacility-text == 'local7' and \$programname == 'httpd' then ~" >> /etc/rsyslog.d/httpd.conf
 
-COPY awslogs.conf awslogs.conf
-RUN python ./awslogs-agent-setup.py -n -r us-east-1 -c /awslogs.conf
-
 RUN pip install supervisor
 COPY supervisord.conf /usr/local/etc/supervisord.conf
 
+RUN mkdir /etc/cloudwatch
+COPY awslogs.conf /etc/cloudwatch/awslogs.conf
+
 EXPOSE 514/tcp 514/udp
-CMD ["/usr/local/bin/supervisord"]
+CMD python ./awslogs-agent-setup.py -n -r us-east-1 -c ${CW_CONFIG_S3_URL-/etc/cloudwatch/awslogs.conf} && \
+    /usr/local/bin/supervisord
